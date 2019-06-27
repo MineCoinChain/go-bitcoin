@@ -36,7 +36,10 @@ func NewBlock(data []byte, PrevHash []byte) *Block {
 		Hash:       nil,
 		Data:       data,
 	}
-	b.SetHash()
+	var pow = NewPOW(&b)
+	hash, nonce := pow.Run()
+	b.Hash = hash
+	b.Nonce = nonce
 	return &b
 }
 
