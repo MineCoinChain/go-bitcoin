@@ -1,9 +1,10 @@
 package main
 
 import (
-	"crypto/sha256"
 	"bytes"
 	"time"
+	"encoding/gob"
+	"log"
 )
 
 type Block struct {
@@ -25,7 +26,7 @@ type Block struct {
 	Data []byte
 }
 
-func NewBlock(data []byte, PrevHash []byte) *Block {
+func NewBlock(data string, PrevHash []byte) *Block {
 	b := Block{
 		Version:    0,
 		MerkleRoot: nil,
@@ -34,7 +35,7 @@ func NewBlock(data []byte, PrevHash []byte) *Block {
 		Nonce:      0,
 		PrevHash:   PrevHash,
 		Hash:       nil,
-		Data:       data,
+		Data:       []byte(data),
 	}
 	var pow = NewPOW(&b)
 	hash, nonce := pow.Run()
@@ -43,18 +44,22 @@ func NewBlock(data []byte, PrevHash []byte) *Block {
 	return &b
 }
 
-func (b *Block) SetHash() {
-	tmp := [][]byte{
-		uintToByte(b.Version),
-		b.MerkleRoot,
-		uintToByte(b.TimeStamp),
-		uintToByte(b.Bits),
-		uintToByte(b.Nonce),
-		b.PrevHash,
-		b.Hash,
-		b.Data,
+func (b *Block)Serialize() []byte {
+	var buffer bytes.Buffer
+	encoder := gob.NewEncoder(&buffer)
+	err := encoder.Encode(b)
+	if err != nil {
+		log.Fatal("encode err:", err)
 	}
-	data := bytes.Join(tmp, []byte{})
-	hash := sha256.Sum256(data)
-	b.Hash = hash[:]
+	return buffer.Bytes()
+}
+
+func Deserialize(src []byte) *Block {
+	var block Block
+	decoder := gob.NewDecoder(bytes.NewReader(src))
+	err := decoder.Decode(&block)
+	if err!=nil{
+		log.Fatal("Deserialize err1:",err)
+	}
+	return &block
 }

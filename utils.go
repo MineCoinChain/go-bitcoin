@@ -16,3 +16,4 @@ func uintToByte(num uint64) []byte {
 	//返回byte切片
 	return buffer.Bytes()
 }
+
