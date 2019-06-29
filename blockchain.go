@@ -1,9 +1,9 @@
 package main
 
 import (
-	"github.com/bolt"
-	"github.com/pkg/errors"
+	"errors"
 	"fmt"
+	"github.com/bolt"
 )
 
 type BlockChain struct {
@@ -32,7 +32,9 @@ func CreateBlockChain() error {
 			if err != nil {
 				return err
 			}
-			genesisBlock := NewBlock(genesisInfo, nil)
+			coinbase := NewCoinbaseTx("中本聪", genesisInfo)
+			txs := []*Transaction{coinbase}
+			genesisBlock := NewBlock(txs, nil)
 			bucket.Put(genesisBlock.Hash, genesisBlock.Serialize())
 			bucket.Put([]byte(lastBlockHashKey), genesisBlock.Hash)
 		}
@@ -48,7 +50,7 @@ func GetBlockChainInstance() (*BlockChain, error) {
 	if err != nil {
 		return nil, err
 	}
-	db.View(func(tx *bolt.Tx) error {
+	_ = db.View(func(tx *bolt.Tx) error {
 		bucket := tx.Bucket([]byte(bucketBlock))
 		if bucket == nil {
 			return errors.New("bucket should not be nil")
@@ -63,19 +65,20 @@ func GetBlockChainInstance() (*BlockChain, error) {
 
 //向区块连中添加区块
 func (bc *BlockChain) AddBlock(data string) error {
-	lastBlockHash := bc.tail
-	newBlock := NewBlock(data, lastBlockHash)
-	err := bc.db.Update(func(tx *bolt.Tx) error {
-		bucket := tx.Bucket([]byte(bucketBlock))
-		if bucket == nil {
-			return errors.New("Bucket should not be null")
-		}
-		bucket.Put(newBlock.Hash, newBlock.Serialize())
-		bucket.Put([]byte(lastBlockHashKey), newBlock.Hash)
-		bc.tail = newBlock.Hash
-		return nil
-	})
-	return err
+	//lastBlockHash := bc.tail
+	//newBlock := NewBlock(data, lastBlockHash)
+	//err := bc.db.Update(func(tx *bolt.Tx) error {
+	//	bucket := tx.Bucket([]byte(bucketBlock))
+	//	if bucket == nil {
+	//		return errors.New("Bucket should not be null")
+	//	}
+	//	bucket.Put(newBlock.Hash, newBlock.Serialize())
+	//	bucket.Put([]byte(lastBlockHashKey), newBlock.Hash)
+	//	bc.tail = newBlock.Hash
+	//	return nil
+	//})
+	//return err
+	return nil
 }
 
 //定义迭代器
@@ -102,9 +105,56 @@ func (it *Iterator) Next() (block *Block) {
 		it.currentHash = block.PrevHash
 		return nil
 	})
-	if err!=nil{
-		fmt.Printf("iterator next err:",err)
+	if err != nil {
+		fmt.Printf("iterator next err:", err)
 		return nil
 	}
 	return
 }
+
+//获取指定账本的金额
+func (bc *BlockChain) FindMyUTXO(address string) []TXOutput {
+	var utxos []TXOutput
+	//查找未花费交易的辅助集合
+	var spendUtxos = make(map[string][]int)
+	//遍历区块
+	it := bc.NewIterator()
+	for {
+		block := it.Next()
+		//遍历交易
+		for _, tx := range block.Transaction {
+			//遍历output，判断这个output的锁定脚本是否是我们的目标地址
+		LABEL:
+			for outputIndex, output := range tx.TXOuputs {
+				if output.ScriptPubk == address {
+					//过滤已经花费的交易
+					currentTxId := string(tx.TXID)
+					if _, ok := spendUtxos[currentTxId]; ok {
+						//判定index是否相等
+						currentIds := spendUtxos[currentTxId]
+						for _, id := range currentIds {
+							if outputIndex == id {
+								break LABEL
+							}
+						}
+					}
+					//如果有的话添加如utxos中
+					utxos = append(utxos, output)
+				}
+			}
+			//遍历input，添加辅助集合：
+			for _, input := range tx.TXInputs {
+				if input.ScriptSig == address {
+					spentKey := string(input.Txid)
+					spendUtxos[spentKey] = append(spendUtxos[spentKey], int(input.Index))
+				}
+			}
+		}
+		if it.currentHash == nil {
+			break
+		}
+	}
+
+	return utxos
+}
+

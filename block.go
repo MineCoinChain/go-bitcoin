@@ -23,10 +23,10 @@ type Block struct {
 	// 哈希, 为了方便，我们将当前区块的哈希放入Block中
 	Hash []byte
 	//交易数据
-	Data []byte
+	Transaction []*Transaction
 }
 
-func NewBlock(data string, PrevHash []byte) *Block {
+func NewBlock(transaction []*Transaction, PrevHash []byte) *Block {
 	b := Block{
 		Version:    0,
 		MerkleRoot: nil,
@@ -35,7 +35,7 @@ func NewBlock(data string, PrevHash []byte) *Block {
 		Nonce:      0,
 		PrevHash:   PrevHash,
 		Hash:       nil,
-		Data:       []byte(data),
+		Transaction:     transaction,
 	}
 	var pow = NewPOW(&b)
 	hash, nonce := pow.Run()

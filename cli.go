@@ -1,8 +1,8 @@
 package main
 
 import (
-	"os"
 	"fmt"
+	"os"
 )
 
 type CLI struct{}
@@ -13,29 +13,40 @@ const Usage = `
 	./blockchain addBlock <需要写入的的数据> "添加区块"
 	./blockchain print "打印区块链"
 `
+
 //解析输入命令的方法
-func (cli *CLI) Run(){
+func (cli *CLI) Run() {
 	cmds := os.Args
 	//用户至少输入两个参数
-	if len(cmds)<2 {
+	if len(cmds) < 2 {
 		fmt.Println("输入参数无效，请检查!")
 		fmt.Println(Usage)
 		return
 	}
-	switch cmds[1]{
+	switch cmds[1] {
 	case "create":
 		fmt.Println("创建区块被调用!")
 		cli.createBlockChain()
+	case "addBlock":
+		if len(cmds) != 3 {
+			fmt.Println("输入参数无效，请检查!")
+			return
+		}
 		data := cmds[2] //需要检验个数
 		cli.addBlock(data)
 	case "print":
 		fmt.Println("打印区块被调用!")
 		cli.print()
+	case "getbalance":
+		fmt.Println("获取余额命令被调用")
+		if len(cmds) != 3 {
+			fmt.Println("输入参数无效，请检查")
+		}
+		address := cmds[2]
+		cli.GetBalance(address)
 	default:
 		fmt.Println("输入参数无效，请检查!")
 		fmt.Println(Usage)
 	}
 
 }
-
-

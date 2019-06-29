@@ -3,7 +3,7 @@ package main
 import (
 	"bytes"
 	"encoding/binary"
-	"github.com/micro/go-log"
+	"log"
 )
 
 func uintToByte(num uint64) []byte {

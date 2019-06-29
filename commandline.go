@@ -1,6 +1,9 @@
 package main
 
-import "fmt"
+import (
+	"fmt"
+	"log"
+)
 
 func (cli *CLI) addBlock(data string) {
 	fmt.Println("添加区块被调用!")
@@ -39,7 +42,7 @@ func (cli *CLI) print() {
 		fmt.Printf("Bits : %d\n", block.Bits)
 		fmt.Printf("Nonce : %d\n", block.Nonce)
 		fmt.Printf("Hash : %x\n", block.Hash)
-		fmt.Printf("Data : %s\n", block.Data)
+		fmt.Printf("Data : %s\n", block.Transaction[0].TXInputs[0].ScriptSig)
 
 		pow := NewPOW(block)
 		fmt.Printf("IsValid: %v\n", pow.IsValid())
@@ -52,4 +55,15 @@ func (cli *CLI) print() {
 	}
 
 }
-
+func (cli *CLI) GetBalance(address string) {
+	bc, err := GetBlockChainInstance()
+	if err != nil {
+		log.Fatal("get block chain instance error:", err)
+	}
+	utxos := bc.FindMyUTXO(address)
+	total := 0
+	for _, txoutput := range utxos {
+		total += txoutput.Value
+	}
+	fmt.Printf("address：%s 的余额为：%d\n", address, total)
+}

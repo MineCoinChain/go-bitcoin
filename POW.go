@@ -54,7 +54,6 @@ func (p *POW) PrepareData(nonce uint64) []byte {
 		uintToByte(b.Bits),
 		uintToByte(nonce),
 		b.PrevHash,
-		b.Data,
 	}
 	data := bytes.Join(tmp, []byte{})
 	hash := sha256.Sum256(data)
