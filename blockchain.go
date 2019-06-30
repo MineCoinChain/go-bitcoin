@@ -151,6 +151,11 @@ func (bc *BlockChain) FindMyUTXO(address string) []UXTOInfo {
 					utxoInfos = append(utxoInfos, utxoinfo)
 				}
 			}
+			//查看是否时挖矿交易，如果是则直接跳过
+			if tx.IsCoinBase(){
+				fmt.Println("挖矿交易，无需遍历集合")
+				continue
+			}
 			//遍历input，添加辅助集合：
 			for _, input := range tx.TXInputs {
 				if input.ScriptSig == address {
