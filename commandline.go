@@ -5,7 +5,6 @@ import (
 	"log"
 )
 
-
 func (cli *CLI) createBlockChain() {
 	err := CreateBlockChain()
 	if err != nil {
@@ -17,7 +16,10 @@ func (cli *CLI) createBlockChain() {
 }
 
 func (cli *CLI) print() {
-	bc, _ := GetBlockChainInstance()
+	bc, err := GetBlockChainInstance()
+	if err != nil {
+		log.Fatal("err:", err)
+	}
 	//调用迭代器，输出blockChain
 	it := bc.NewIterator()
 	for {
@@ -65,7 +67,12 @@ func (cli *CLI) Send(from, to string, amount int, miner, data string) {
 	fmt.Println("amount:", amount)
 	fmt.Println("miner:", miner)
 	fmt.Println("data:", miner)
-	bc, _ := GetBlockChainInstance()
+	bc, err := GetBlockChainInstance()
+	if err != nil {
+		log.Println("err:", err)
+		return
+	}
+	defer bc.db.Close()
 	coinBaseTx := NewCoinbaseTx(miner, data)
 	//常见txs数组有效的交易添加进来
 	txs := []*Transaction{coinBaseTx}
@@ -77,8 +84,8 @@ func (cli *CLI) Send(from, to string, amount int, miner, data string) {
 		log.Println("这是一笔有效的交易")
 		txs = append(txs, tx)
 	}
-	err := bc.AddBlock(txs)
-	if err!=nil{
+	err = bc.AddBlock(txs)
+	if err != nil {
 		log.Fatal("添加区块失败")
 	}
 	fmt.Println("添加区块成功，转账成功")

@@ -19,6 +19,10 @@ const lastBlockHashKey = "lastBlockHashKey"
 
 //提供初始化方法
 func CreateBlockChain() error {
+	if IsFileExists(blockchainDBFile){
+		fmt.Println("区块链已经存在，请直接操作")
+		return nil
+	}
 	//区块不存在，创建
 	db, err := bolt.Open(blockchainDBFile, 0600, nil)
 	if err != nil {
@@ -45,6 +49,10 @@ func CreateBlockChain() error {
 
 //获取区块链实例，用于后续操作, 每一次有业务时都会调用
 func GetBlockChainInstance() (*BlockChain, error) {
+	//判断区块链是否存在
+	if !IsFileExists(blockchainDBFile){
+		return nil,errors.New("当前区块链不存在，请先创建")
+	}
 	var lastHash []byte
 	db, err := bolt.Open(blockchainDBFile, 0400, nil)
 	if err != nil {

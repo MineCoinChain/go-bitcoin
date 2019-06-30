@@ -29,12 +29,12 @@ type Transaction struct {
 type TXInput struct {
 	Txid      []byte
 	Index     int
-	ScriptSig string
+	ScriptSig string //私钥签名+来源公钥
 }
 
 //定义输出结构
 type TXOutput struct {
-	ScriptPubk string
+	ScriptPubk string //输出地址的公钥
 	Value      int
 }
 
@@ -121,4 +121,12 @@ func NewTransaction(from, to string, amount int, bc *BlockChain) *Transaction {
 	}
 	tx.setHash()
 	return &tx
+}
+
+func (tx Transaction) IsCoinBase() bool {
+	inputs := tx.TXInputs
+	if len(inputs) == 1 && inputs[0].Txid == nil && inputs[0].Index == -1 {
+		return true
+	}
+	return false
 }

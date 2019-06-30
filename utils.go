@@ -4,6 +4,7 @@ import (
 	"bytes"
 	"encoding/binary"
 	"log"
+	"os"
 )
 
 func uintToByte(num uint64) []byte {
@@ -17,3 +18,8 @@ func uintToByte(num uint64) []byte {
 	return buffer.Bytes()
 }
 
+func IsFileExists(fileName string) bool {
+	_, err := os.Stat(fileName)
+	//根据数据中的error值进行判断，不存在返回false，存在返回true
+	return !os.IsNotExist(err)
+}
