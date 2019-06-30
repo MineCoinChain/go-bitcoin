@@ -11,10 +11,9 @@ type CLI struct{}
 const Usage = `
 正确使用方法：
 	./blockchain create "创建区块链"
-	./blockchain addBlock <需要写入的的数据> "添加区块"
 	./blockchain print "打印区块链"
 	./blockchain getbalance <地址> "获取余额"
-	./blockchain send <FROM <TO> <AMOUNT> <MINER> <DATA> 
+	./blockchain send <FROM> <TO> <AMOUNT> <MINER> <DATA> 
 `
 
 //解析输入命令的方法
@@ -30,13 +29,6 @@ func (cli *CLI) Run() {
 	case "create":
 		fmt.Println("创建区块被调用!")
 		cli.createBlockChain()
-	case "addBlock":
-		if len(cmds) != 3 {
-			fmt.Println("输入参数无效，请检查!")
-			return
-		}
-		data := cmds[2] //需要检验个数
-		cli.addBlock(data)
 	case "print":
 		fmt.Println("打印区块被调用!")
 		cli.print()

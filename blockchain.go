@@ -65,20 +65,19 @@ func GetBlockChainInstance() (*BlockChain, error) {
 
 //向区块连中添加区块
 func (bc *BlockChain) AddBlock(tx []*Transaction) error {
-	//lastBlockHash := bc.tail
-	//newBlock := NewBlock(data, lastBlockHash)
-	//err := bc.db.Update(func(tx *bolt.Tx) error {
-	//	bucket := tx.Bucket([]byte(bucketBlock))
-	//	if bucket == nil {
-	//		return errors.New("Bucket should not be null")
-	//	}
-	//	bucket.Put(newBlock.Hash, newBlock.Serialize())
-	//	bucket.Put([]byte(lastBlockHashKey), newBlock.Hash)
-	//	bc.tail = newBlock.Hash
-	//	return nil
-	//})
-	//return err
-	return nil
+	lastBlockHash := bc.tail
+	newBlock := NewBlock(tx, lastBlockHash)
+	err := bc.db.Update(func(tx *bolt.Tx) error {
+		bucket := tx.Bucket([]byte(bucketBlock))
+		if bucket == nil {
+			return errors.New("Bucket should not be null")
+		}
+		bucket.Put(newBlock.Hash, newBlock.Serialize())
+		bucket.Put([]byte(lastBlockHashKey), newBlock.Hash)
+		bc.tail = newBlock.Hash
+		return nil
+	})
+	return err
 }
 
 //定义迭代器

@@ -5,16 +5,6 @@ import (
 	"log"
 )
 
-func (cli *CLI) addBlock(data string) {
-	//fmt.Println("添加区块被调用!")
-	//bc, _ := GetBlockChainInstance()
-	//err := bc.AddBlock(data)
-	//if err != nil {
-	//	fmt.Println("AddBlock failed:", err)
-	//	return
-	//}
-	fmt.Println("添加区块成功!")
-}
 
 func (cli *CLI) createBlockChain() {
 	err := CreateBlockChain()
@@ -68,11 +58,28 @@ func (cli *CLI) GetBalance(address string) {
 	fmt.Printf("address：%s 的余额为：%d\n", address, total)
 }
 
-/*由于暂时没有挖矿竞争机制，因此每次send时指定一名矿工生成一个区块，将交易打包至区块*/
+/*由于暂时没有挖矿竞争机制，因此每次send时指定一名矿工生成一个区块，将一笔交易打包至区块*/
 func (cli *CLI) Send(from, to string, amount int, miner, data string) {
-	fmt.Println("from:",from)
-	fmt.Println("to:",to)
-	fmt.Println("amount:",amount)
-	fmt.Println("miner:",miner)
-	fmt.Println("data:",miner)
+	fmt.Println("from:", from)
+	fmt.Println("to:", to)
+	fmt.Println("amount:", amount)
+	fmt.Println("miner:", miner)
+	fmt.Println("data:", miner)
+	bc, _ := GetBlockChainInstance()
+	coinBaseTx := NewCoinbaseTx(miner, data)
+	//常见txs数组有效的交易添加进来
+	txs := []*Transaction{coinBaseTx}
+	//创建普通交易
+	tx := NewTransaction(from, to, amount, bc)
+	if tx == nil {
+		log.Println("这是一笔无效的交易")
+	} else {
+		log.Println("这是一笔有效的交易")
+		txs = append(txs, tx)
+	}
+	err := bc.AddBlock(txs)
+	if err!=nil{
+		log.Fatal("添加区块失败")
+	}
+	fmt.Println("添加区块成功，转账成功")
 }
