@@ -6,13 +6,13 @@ import (
 )
 
 func (cli *CLI) addBlock(data string) {
-	fmt.Println("添加区块被调用!")
-	bc, _ := GetBlockChainInstance()
-	err := bc.AddBlock(data)
-	if err != nil {
-		fmt.Println("AddBlock failed:", err)
-		return
-	}
+	//fmt.Println("添加区块被调用!")
+	//bc, _ := GetBlockChainInstance()
+	//err := bc.AddBlock(data)
+	//if err != nil {
+	//	fmt.Println("AddBlock failed:", err)
+	//	return
+	//}
 	fmt.Println("添加区块成功!")
 }
 
@@ -63,7 +63,16 @@ func (cli *CLI) GetBalance(address string) {
 	utxos := bc.FindMyUTXO(address)
 	total := 0
 	for _, txoutput := range utxos {
-		total += txoutput.Value
+		total += txoutput.TXOutput.Value
 	}
 	fmt.Printf("address：%s 的余额为：%d\n", address, total)
+}
+
+/*由于暂时没有挖矿竞争机制，因此每次send时指定一名矿工生成一个区块，将交易打包至区块*/
+func (cli *CLI) Send(from, to string, amount int, miner, data string) {
+	fmt.Println("from:",from)
+	fmt.Println("to:",to)
+	fmt.Println("amount:",amount)
+	fmt.Println("miner:",miner)
+	fmt.Println("data:",miner)
 }

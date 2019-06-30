@@ -64,7 +64,7 @@ func GetBlockChainInstance() (*BlockChain, error) {
 }
 
 //向区块连中添加区块
-func (bc *BlockChain) AddBlock(data string) error {
+func (bc *BlockChain) AddBlock(tx []*Transaction) error {
 	//lastBlockHash := bc.tail
 	//newBlock := NewBlock(data, lastBlockHash)
 	//err := bc.db.Update(func(tx *bolt.Tx) error {
@@ -113,8 +113,8 @@ func (it *Iterator) Next() (block *Block) {
 }
 
 //获取指定账本的金额
-func (bc *BlockChain) FindMyUTXO(address string) []TXOutput {
-	var utxos []TXOutput
+func (bc *BlockChain) FindMyUTXO(address string) []UXTOInfo {
+	var utxoInfos []UXTOInfo
 	//查找未花费交易的辅助集合
 	var spendUtxos = make(map[string][]int)
 	//遍历区块
@@ -139,7 +139,9 @@ func (bc *BlockChain) FindMyUTXO(address string) []TXOutput {
 						}
 					}
 					//如果有的话添加如utxos中
-					utxos = append(utxos, output)
+					//utxos = append(utxos, output)
+					utxoinfo := UXTOInfo{Txid: tx.TXID, Index: int64(outputIndex), TXOutput: output}
+					utxoInfos = append(utxoInfos, utxoinfo)
 				}
 			}
 			//遍历input，添加辅助集合：
@@ -147,6 +149,7 @@ func (bc *BlockChain) FindMyUTXO(address string) []TXOutput {
 				if input.ScriptSig == address {
 					spentKey := string(input.Txid)
 					spendUtxos[spentKey] = append(spendUtxos[spentKey], int(input.Index))
+
 				}
 			}
 		}
@@ -155,6 +158,20 @@ func (bc *BlockChain) FindMyUTXO(address string) []TXOutput {
 		}
 	}
 
-	return utxos
+	return utxoInfos
 }
 
+func (bc *BlockChain) findNeedUTXO(from string, amount int) (map[string][]int64, int) {
+	var retMap = make(map[string][]int64)
+	var retAmount int
+	//遍历账本，查找所有的UTXO
+	utxoInfos := bc.FindMyUTXO(from)
+	for _, utxoinfo := range utxoInfos {
+		retAmount += utxoinfo.Value
+		retMap[string(utxoinfo.Txid)] = append(retMap[string(utxoinfo.Txid)], utxoinfo.Index)
+		if retAmount >= amount {
+			break
+		}
+	}
+	return retMap, retAmount
+}
