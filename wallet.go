@@ -19,7 +19,7 @@ import (
 
 type wallet struct {
 	//私钥
-	priKey *ecdsa.PrivateKey
+	PriKey *ecdsa.PrivateKey
 	//公钥原型定义
 	// type PublicKey struct {
 	// 	elliptic.Curve
@@ -27,7 +27,7 @@ type wallet struct {
 	// }
 	//公钥，X，Y类型一致，长度一致，我们X和Y拼接成字节流，赋值给pubKey字段，用于传输
 	//验证时，将X和Y截取出来，再创建一条曲线，就可以还原公钥，进一步校验。
-	pubKey []byte
+	PubKey []byte
 }
 
 //创建密钥对
@@ -44,15 +44,15 @@ func newWalletKeyPair() *wallet {
 	pubKey := append(pubKeyRaw.X.Bytes(), pubKeyRaw.Y.Bytes()...)
 	//创建wallet结构
 	wallet := wallet{}
-	wallet.priKey = priKey
-	wallet.pubKey = pubKey
+	wallet.PriKey = priKey
+	wallet.PubKey = pubKey
 	return &wallet
 }
 
 //根据私钥生成地址
 func (w *wallet) getAddress() string {
 	//获得公钥
-	publicKey := w.pubKey
+	publicKey := w.PubKey
 	//进行hash256处理
 	hash1 := sha256.Sum256(publicKey)
 	//hash160处理
@@ -67,7 +67,7 @@ func (w *wallet) getAddress() string {
 	second := sha256.Sum256(first[:])
 	checksum := second[0:4]
 	//拼接校验值和21字节哈希，得到钱包地址
-	payload =append(payload,checksum...)
-	address:=base58.Encode(payload)
+	payload = append(payload, checksum...)
+	address := base58.Encode(payload)
 	return address
 }
