@@ -90,3 +90,24 @@ func (cli *CLI) Send(from, to string, amount int, miner, data string) {
 	}
 	fmt.Println("添加区块成功，转账成功")
 }
+func (cli *CLI) createWallet() {
+	wm := NewWalletManager()
+	address := wm.createWallet()
+	if len(address) == 0 {
+		log.Println("创建钱包失败")
+		return
+	}
+	fmt.Println("新钱包的地址为：", address)
+}
+
+func (cli *CLI) listAddress() {
+	wm := NewWalletManager()
+	if wm == nil {
+		log.Println("NewWalletManager failed")
+		return
+	}
+	addresses := wm.listAddress()
+	for _, address :=range addresses{
+		fmt.Printf("%s\n", address)
+	}
+}

@@ -2,7 +2,6 @@ package main
 
 import (
 	"fmt"
-	"log"
 	"os"
 	"strconv"
 )
@@ -16,6 +15,7 @@ const Usage = `
 	./blockchain getBalance <地址> "获取余额"
 	./blockchain send <FROM> <TO> <AMOUNT> <MINER> <DATA> 
 	./blockchain createWallet "创建钱包"
+	./blockchain listAddress "列举所有的钱包地址"
 `
 
 //解析输入命令的方法
@@ -57,6 +57,9 @@ func (cli *CLI) Run() {
 	case "createWallet":
 		fmt.Println("创建钱包命令被调用")
 		cli.createWallet()
+	case "listAddress":
+		fmt.Println("列举所有的钱包地址")
+		cli.listAddress()
 	default:
 		fmt.Println("输入参数无效，请检查!")
 		fmt.Println(Usage)
@@ -64,12 +67,4 @@ func (cli *CLI) Run() {
 
 }
 
-func (cli *CLI) createWallet() {
-	wm := NewWalletManager()
-	address := wm.createWallet()
-	if len(address) == 0 {
-		log.Println("创建钱包失败")
-		return
-	}
-	fmt.Println("新钱包的地址为：",address)
-}
+
