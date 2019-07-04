@@ -2,6 +2,7 @@ package main
 
 import (
 	"bytes"
+	"crypto/ecdsa"
 	"errors"
 	"fmt"
 	"github.com/bolt"
@@ -20,7 +21,7 @@ const lastBlockHashKey = "lastBlockHashKey"
 
 //提供初始化方法
 func CreateBlockChain(address string) error {
-	if IsFileExists(blockchainDBFile){
+	if IsFileExists(blockchainDBFile) {
 		fmt.Println("区块链已经存在，请直接操作")
 		return nil
 	}
@@ -51,8 +52,8 @@ func CreateBlockChain(address string) error {
 //获取区块链实例，用于后续操作, 每一次有业务时都会调用
 func GetBlockChainInstance() (*BlockChain, error) {
 	//判断区块链是否存在
-	if !IsFileExists(blockchainDBFile){
-		return nil,errors.New("当前区块链不存在，请先创建")
+	if !IsFileExists(blockchainDBFile) {
+		return nil, errors.New("当前区块链不存在，请先创建")
 	}
 	var lastHash []byte
 	db, err := bolt.Open(blockchainDBFile, 0400, nil)
@@ -134,7 +135,7 @@ func (bc *BlockChain) FindMyUTXO(PubKeyHash []byte) []UXTOInfo {
 			//遍历output，判断这个output的锁定脚本是否是我们的目标地址
 		LABEL:
 			for outputIndex, output := range tx.TXOuputs {
-				if bytes.Equal(output.ScriptPubkeyHash,PubKeyHash) {
+				if bytes.Equal(output.ScriptPubkeyHash, PubKeyHash) {
 					//fmt.Println("output.ScriptPubkeyHash",output.ScriptPubkeyHash)
 					//过滤已经花费的交易
 					currentTxId := string(tx.TXID)
@@ -154,7 +155,7 @@ func (bc *BlockChain) FindMyUTXO(PubKeyHash []byte) []UXTOInfo {
 				}
 			}
 			//查看是否时挖矿交易，如果是则直接跳过
-			if tx.IsCoinBase(){
+			if tx.IsCoinBase() {
 				fmt.Println("挖矿交易，无需遍历集合")
 				continue
 			}
@@ -179,7 +180,7 @@ func (bc *BlockChain) findNeedUTXO(PubKeyHash []byte, amount int) (map[string][]
 	var retMap = make(map[string][]int64)
 	var retAmount int
 	//遍历账本，查找所有的UTXO
-	fmt.Println("**********pubkeyHash",PubKeyHash)
+	fmt.Println("**********pubkeyHash", PubKeyHash)
 	utxoInfos := bc.FindMyUTXO(PubKeyHash)
 	for _, utxoinfo := range utxoInfos {
 		retAmount += utxoinfo.Value
@@ -189,4 +190,15 @@ func (bc *BlockChain) findNeedUTXO(PubKeyHash []byte, amount int) (map[string][]
 		}
 	}
 	return retMap, retAmount
+}
+
+//外部调用的签名函数
+func (bc *BlockChain) signTransaction(tx *Transaction, priKey *ecdsa.PrivateKey) bool {
+	fmt.Println("开始签名交易")
+	//根据传递进来的tx，得到所有需要的前交易prevtxs
+	prevTxs := make(map[string]*Transaction)
+	//遍历账本找到所有的签名集合
+
+	//使用sign对交易进行签名
+	return tx.sign(priKey, prevTxs)
 }

@@ -9,6 +9,7 @@ package main
 
 import (
 	"bytes"
+	"crypto/ecdsa"
 	"crypto/sha256"
 	"encoding/gob"
 	"fmt"
@@ -67,7 +68,7 @@ func NewCoinbaseTx(miner string, data string) *Transaction {
 		ScriptSig: nil,
 		PubKey:    []byte(data),
 	}
-	output :=NewTXOutput(miner,int64(reward))
+	output := NewTXOutput(miner, int64(reward))
 	timeStamp := time.Now().Unix()
 
 	tx := Transaction{
@@ -95,7 +96,7 @@ func NewTransaction(from, to string, amount int, bc *BlockChain) *Transaction {
 		return nil
 	}
 	fmt.Println("找到付款人的私钥和公钥")
-	//priKey:=wallet.PriKey //签名使用的私钥
+	priKey := wallet.PriKey                       //签名使用的私钥
 	pubKey := wallet.PubKey                       //查找未花费交易输出使用到的公钥
 	pubKeyHash := GetPubKeyHashFromPubKey(pubKey) //得到公钥对应的公钥哈希
 	var spentUTXO = make(map[string][]int64)
@@ -136,6 +137,10 @@ func NewTransaction(from, to string, amount int, bc *BlockChain) *Transaction {
 		TimeStamp: uint64(timeStamp),
 	}
 	tx.setHash()
+	if !bc.signTransaction(&tx, priKey){
+		log.Println("交易签名失败")
+		return nil
+	}
 	return &tx
 }
 
@@ -154,4 +159,16 @@ func NewTXOutput(address string, amount int64) TXOutput {
 	}
 	output.ScriptPubkeyHash = GetPubKeyHashFromAddress(address)
 	return output
+}
+
+//实现具体的签名动作（copy 设置为空 签名动作）
+//参数1：私钥
+//参数2：inputs所引用的output所在交易的集合
+//>key :交易id
+//>value:交易本身
+func (tx *Transaction) sign(priKey *ecdsa.PrivateKey, prvTxs map[string]*Transaction) bool {
+	log.Println("具体对交易的签名 sign")
+
+	log.Println("交易签名成功")
+	return true
 }
