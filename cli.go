@@ -16,6 +16,7 @@ const Usage = `
 	./blockchain send <FROM> <TO> <AMOUNT> <MINER> <DATA> 
 	./blockchain createWallet "创建钱包"
 	./blockchain listAddress "列举所有的钱包地址"
+	./blockchain printTx "打印区块中所有交易"
 `
 
 //解析输入命令的方法
@@ -65,6 +66,9 @@ func (cli *CLI) Run() {
 	case "listAddress":
 		fmt.Println("列举所有的钱包地址")
 		cli.listAddress()
+	case "printTx":
+		fmt.Println("打印区块中所有交易")
+		cli.printTx()
 	default:
 		fmt.Println("输入参数无效，请检查!")
 		fmt.Println(Usage)
