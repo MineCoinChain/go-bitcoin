@@ -6,6 +6,7 @@ import (
 	"errors"
 	"fmt"
 	"github.com/bolt"
+	"log"
 )
 
 type BlockChain struct {
@@ -74,7 +75,19 @@ func GetBlockChainInstance() (*BlockChain, error) {
 }
 
 //向区块连中添加区块
-func (bc *BlockChain) AddBlock(tx []*Transaction) error {
+func (bc *BlockChain) AddBlock(txs []*Transaction) error {
+	//有效的交易会添加到区块
+	tx := []*Transaction{}
+	//添加区块前对交易进行校验
+	for _, tx1 := range txs {
+		if bc.verifyTransaction(tx1){
+			log.Println("交易校验成功")
+			tx = append(tx,tx1)
+		}else{
+			log.Println("当前交易校验失败")
+		}
+	}
+
 	lastBlockHash := bc.tail
 	newBlock := NewBlock(tx, lastBlockHash)
 	err := bc.db.Update(func(tx *bolt.Tx) error {
@@ -198,7 +211,56 @@ func (bc *BlockChain) signTransaction(tx *Transaction, priKey *ecdsa.PrivateKey)
 	//根据传递进来的tx，得到所有需要的前交易prevtxs
 	prevTxs := make(map[string]*Transaction)
 	//遍历账本找到所有的签名集合
-
+	for _, input := range tx.TXInputs {
+		prevTx := bc.FindTransaction(input.Txid)
+		if prevTx == nil {
+			log.Println("没有找到有效的引用交易")
+			return false
+		}
+		fmt.Println("找到了引用交易")
+		prevTxs[string(input.Txid)] = prevTx
+	}
 	//使用sign对交易进行签名
 	return tx.sign(priKey, prevTxs)
+}
+
+func (bc *BlockChain) FindTransaction(txid []byte) *Transaction {
+	//遍历区块，遍历账本，比较txid与id，如果相同返回交易，反之返回nil
+	it := bc.NewIterator()
+	for {
+		block := it.Next()
+		for _, tx := range block.Transaction {
+			//如果当前对比的交易id与我们查找的交易id相同，我们就找到了目标交易
+			if bytes.Equal(tx.TXID, txid) {
+				return tx
+			}
+		}
+		if len(block.PrevHash) == 0 {
+			break
+		}
+	}
+	return nil
+}
+
+//校验单笔交易
+func (bc *BlockChain) verifyTransaction(tx *Transaction) bool {
+
+	fmt.Println("矿工开始校验交易")
+	if tx.IsCoinBase(){
+		log.Println("发现挖矿交易，无需校验")
+		return true
+	}
+	//根据传递进来的tx，得到所有需要的前交易prevtxs
+	prevTxs := make(map[string]*Transaction)
+	//遍历账本找到所有的签名集合
+	for _, input := range tx.TXInputs {
+		prevTx := bc.FindTransaction(input.Txid)
+		if prevTx == nil {
+			log.Println("没有找到有效的引用交易")
+			return false
+		}
+		fmt.Println("找到了引用交易")
+		prevTxs[string(input.Txid)] = prevTx
+	}
+	return tx.verify(prevTxs)
 }

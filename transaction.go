@@ -10,10 +10,13 @@ package main
 import (
 	"bytes"
 	"crypto/ecdsa"
+	"crypto/elliptic"
+	"crypto/rand"
 	"crypto/sha256"
 	"encoding/gob"
 	"fmt"
 	"log"
+	"math/big"
 	"time"
 )
 
@@ -137,7 +140,7 @@ func NewTransaction(from, to string, amount int, bc *BlockChain) *Transaction {
 		TimeStamp: uint64(timeStamp),
 	}
 	tx.setHash()
-	if !bc.signTransaction(&tx, priKey){
+	if !bc.signTransaction(&tx, priKey) {
 		log.Println("交易签名失败")
 		return nil
 	}
@@ -166,9 +169,98 @@ func NewTXOutput(address string, amount int64) TXOutput {
 //参数2：inputs所引用的output所在交易的集合
 //>key :交易id
 //>value:交易本身
-func (tx *Transaction) sign(priKey *ecdsa.PrivateKey, prvTxs map[string]*Transaction) bool {
+func (tx *Transaction) sign(priKey *ecdsa.PrivateKey, prevTxs map[string]*Transaction) bool {
 	log.Println("具体对交易的签名 sign")
+	//挖矿交易不需要签名
+	if tx.IsCoinBase() {
+		log.Println("找到挖矿交易，不需要进行签名")
+		return true
+	}
+	//获取交易的copy，copy时需要将交易置空
+	txCopy := tx.trimmedCopy()
+	//遍历交易的inputs
+	for i, input := range txCopy.TXInputs {
+		fmt.Printf("开始对input%d进行签名......\n", i)
+		prevTx := prevTxs[string(input.Txid)]
+		if prevTx == nil {
+			return false
+		}
+		output := prevTx.TXOuputs[input.Index]
+		//>>获取引用的output的公钥哈希
+		txCopy.TXInputs[i].PubKey = output.ScriptPubkeyHash
+		//>>对copy的交易进行签名
+		txCopy.setHash()
+		hashData := txCopy.TXID //我们签名的具体数据
+		//>>将input的pubKey字段置为nil,还原数据，防止干扰后面input的签名
+		txCopy.TXInputs[i].PubKey = nil
+		//>>将数字签名赋值给tx
+		r, s, err := ecdsa.Sign(rand.Reader, priKey, hashData)
+		if err != nil {
+			log.Println("私钥签名失败")
+			return false
+		}
+		signature := append(r.Bytes(), s.Bytes()...)
+		tx.TXInputs[i].ScriptSig = signature
+
+	}
 
 	log.Println("交易签名成功")
+	return true
+}
+
+func (tx *Transaction) trimmedCopy() *Transaction {
+	var inputs []TXInput
+	var outputs []TXOutput
+	for _, input := range tx.TXInputs {
+		input := TXInput{
+			Txid:      input.Txid,
+			Index:     input.Index,
+			ScriptSig: nil,
+			PubKey:    nil,
+		}
+		inputs = append(inputs, input)
+	}
+	outputs = tx.TXOuputs
+	txCopy := Transaction{
+		TXID:      tx.TXID,
+		TXInputs:  inputs,
+		TXOuputs:  outputs,
+		TimeStamp: tx.TimeStamp,
+	}
+	return &txCopy
+}
+
+//具体校验
+func (tx *Transaction) verify(prevTxs map[string]*Transaction) bool {
+	txCopy := tx.trimmedCopy()
+	for i, input := range tx.TXInputs {
+		prevTx := prevTxs[string(input.Txid)]
+		if prevTx == nil {
+			return false
+		}
+		output := prevTx.TXOuputs[input.Index]
+		txCopy.TXInputs[i].PubKey = output.ScriptPubkeyHash
+		txCopy.setHash()
+		//清理环境，设置为nil
+		txCopy.TXInputs[i].PubKey = nil
+		//获取公钥验证需要的数据
+		hashData := txCopy.TXID
+		signature := input.ScriptSig
+		pubKey := input.PubKey
+		//开始校验
+		var r, s, x, y big.Int
+		r.SetBytes(signature[:len(signature)/2])
+		s.SetBytes(signature[len(signature)/2:])
+		x.SetBytes(pubKey[:len(pubKey)/2])
+		y.SetBytes(pubKey[len(pubKey)/2:])
+		curve := elliptic.P256()
+		pubKeyRaw := ecdsa.PublicKey{Curve: curve, X: &x, Y: &y}
+		if res := ecdsa.Verify(&pubKeyRaw, hashData, &r, &s); !res {
+			log.Println("发现校验失败的input！")
+			return false
+		}
+		log.Println("公钥校验成功")
+
+	}
 	return true
 }
