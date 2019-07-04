@@ -64,7 +64,7 @@ func Deserialize(src []byte) *Block {
 	decoder := gob.NewDecoder(bytes.NewReader(src))
 	err := decoder.Decode(&block)
 	if err != nil {
-		log.Fatal("Deserialize err1:", err)
+		log.Fatal("Deserialize error1111:", err)
 	}
 	return &block
 }

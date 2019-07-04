@@ -29,13 +29,14 @@ type Transaction struct {
 type TXInput struct {
 	Txid      []byte
 	Index     int
-	ScriptSig string //私钥签名+来源公钥
+	ScriptSig []byte //付款人的私钥签名
+	PubKey    []byte //付款人的公钥
 }
 
 //定义输出结构
 type TXOutput struct {
-	ScriptPubk string //输出地址的公钥
-	Value      int
+	ScriptPubkeyHash []byte //输出地址的公钥，所定脚本使用
+	Value            int
 }
 
 //封装output，使其包含output详情
@@ -45,7 +46,7 @@ type UXTOInfo struct {
 	TXOutput
 }
 
-//获取交易ID
+//计算Transaction的哈希值获取交易TXID
 func (tx *Transaction) setHash() {
 	var buffer bytes.Buffer
 	encoder := gob.NewEncoder(&buffer)
@@ -63,12 +64,10 @@ func NewCoinbaseTx(miner string, data string) *Transaction {
 		Txid:  nil,
 		Index: -1,
 		//挖矿交易不需要签名，因此挖矿字段可以书写任意值
-		ScriptSig: data,
+		ScriptSig: nil,
+		PubKey:    []byte(data),
 	}
-	output := TXOutput{
-		Value:      reward,
-		ScriptPubk: miner,
-	}
+	output :=NewTXOutput(miner,int64(reward))
 	timeStamp := time.Now().Unix()
 
 	tx := Transaction{
@@ -83,10 +82,26 @@ func NewCoinbaseTx(miner string, data string) *Transaction {
 
 //创建普通交易
 func NewTransaction(from, to string, amount int, bc *BlockChain) *Transaction {
+	//调用钱包，找到付款人的公钥哈希
+	wm := NewWalletManager()
+	if wm == nil {
+		log.Println("打开钱包失败")
+		return nil
+	}
+	//钱包里面找到对应的wallet
+	wallet, ok := wm.Wallets[from]
+	if !ok {
+		log.Println("没有找到付款人地址对应的私钥")
+		return nil
+	}
+	fmt.Println("找到付款人的私钥和公钥")
+	//priKey:=wallet.PriKey //签名使用的私钥
+	pubKey := wallet.PubKey                       //查找未花费交易输出使用到的公钥
+	pubKeyHash := GetPubKeyHashFromPubKey(pubKey) //得到公钥对应的公钥哈希
 	var spentUTXO = make(map[string][]int64)
 	var retValue int
 	//遍历账本，查找from能够使用的utxo集合，以及这些UTXO的余额
-	spentUTXO, retValue = bc.findNeedUTXO(from, amount)
+	spentUTXO, retValue = bc.findNeedUTXO(pubKeyHash, amount)
 	if retValue < amount {
 		fmt.Println("可支付的金额不足，创建交易失败")
 		return nil
@@ -99,17 +114,18 @@ func NewTransaction(from, to string, amount int, bc *BlockChain) *Transaction {
 			input := TXInput{
 				Txid:      []byte(txid),
 				Index:     int(index),
-				ScriptSig: from,
+				ScriptSig: nil,
+				PubKey:    pubKey,
 			}
 			inputs = append(inputs, input)
 		}
 
 	}
 	//拼接outputs
-	output1 := TXOutput{to, amount}
+	output1 := NewTXOutput(to, int64(amount))
 	output = append(output, output1)
 	if retValue > amount {
-		output2 := TXOutput{from, retValue - amount}
+		output2 := NewTXOutput(from, int64(retValue-amount))
 		output = append(output, output2)
 	}
 	timeStamp := time.Now().Unix()
@@ -129,4 +145,13 @@ func (tx Transaction) IsCoinBase() bool {
 		return true
 	}
 	return false
+}
+
+//通过地址获取公钥哈希
+func NewTXOutput(address string, amount int64) TXOutput {
+	output := TXOutput{
+		Value: int(amount),
+	}
+	output.ScriptPubkeyHash = GetPubKeyHashFromAddress(address)
+	return output
 }

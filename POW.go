@@ -37,7 +37,7 @@ func (p *POW) Run() ([]byte, uint64) {
 		var targetInt = new(big.Int)
 		targetInt.SetBytes(target[:])
 		if targetInt.Cmp(p.Target) == -1 {
-			fmt.Println("挖矿成功，")
+			fmt.Println("挖矿成功")
 			break
 		}
 		nonce++

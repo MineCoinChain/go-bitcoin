@@ -10,7 +10,7 @@ type CLI struct{}
 
 const Usage = `
 正确使用方法：
-	./blockchain create "创建区块链"
+	./blockchain create <地址> "创建区块链"
 	./blockchain print "打印区块链"
 	./blockchain getBalance <地址> "获取余额"
 	./blockchain send <FROM> <TO> <AMOUNT> <MINER> <DATA> 
@@ -30,7 +30,12 @@ func (cli *CLI) Run() {
 	switch cmds[1] {
 	case "create":
 		fmt.Println("创建区块被调用!")
-		cli.createBlockChain()
+		if len(cmds) != 3 {
+			fmt.Println("输入参数无效，请检查")
+			return
+		}
+		address := cmds[2]
+		cli.createBlockChain(address)
 	case "print":
 		fmt.Println("打印区块被调用!")
 		cli.print()
@@ -66,5 +71,3 @@ func (cli *CLI) Run() {
 	}
 
 }
-
-

@@ -5,8 +5,12 @@ import (
 	"log"
 )
 
-func (cli *CLI) createBlockChain() {
-	err := CreateBlockChain()
+func (cli *CLI) createBlockChain(address string) {
+	if !isValidAddress(address){
+		fmt.Println("传入地址无效")
+		return
+	}
+	err := CreateBlockChain(address)
 	if err != nil {
 		fmt.Println("CreateBlockChain failed:", err)
 		return
@@ -48,11 +52,17 @@ func (cli *CLI) print() {
 
 }
 func (cli *CLI) GetBalance(address string) {
+	if !isValidAddress(address){
+		fmt.Println("传入地址无效")
+		return
+	}
 	bc, err := GetBlockChainInstance()
 	if err != nil {
 		log.Fatal("get block chain instance error:", err)
 	}
-	utxos := bc.FindMyUTXO(address)
+	defer bc.db.Close()
+	PubKeyHash:=GetPubKeyHashFromAddress(address)
+	utxos := bc.FindMyUTXO(PubKeyHash)
 	total := 0
 	for _, txoutput := range utxos {
 		total += txoutput.TXOutput.Value
@@ -62,11 +72,19 @@ func (cli *CLI) GetBalance(address string) {
 
 /*由于暂时没有挖矿竞争机制，因此每次send时指定一名矿工生成一个区块，将一笔交易打包至区块*/
 func (cli *CLI) Send(from, to string, amount int, miner, data string) {
-	fmt.Println("from:", from)
-	fmt.Println("to:", to)
-	fmt.Println("amount:", amount)
-	fmt.Println("miner:", miner)
-	fmt.Println("data:", miner)
+
+	if !isValidAddress(from){
+		fmt.Println("传入from地址无效")
+		return
+	}
+	if !isValidAddress(to){
+		fmt.Println("传入to地址无效")
+		return
+	}
+	if !isValidAddress(miner){
+		fmt.Println("传入miner地址无效")
+		return
+	}
 	bc, err := GetBlockChainInstance()
 	if err != nil {
 		log.Println("err:", err)

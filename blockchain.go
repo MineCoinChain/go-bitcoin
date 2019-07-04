@@ -1,6 +1,7 @@
 package main
 
 import (
+	"bytes"
 	"errors"
 	"fmt"
 	"github.com/bolt"
@@ -18,7 +19,7 @@ const bucketBlock = "bucketBlock"
 const lastBlockHashKey = "lastBlockHashKey"
 
 //提供初始化方法
-func CreateBlockChain() error {
+func CreateBlockChain(address string) error {
 	if IsFileExists(blockchainDBFile){
 		fmt.Println("区块链已经存在，请直接操作")
 		return nil
@@ -36,7 +37,7 @@ func CreateBlockChain() error {
 			if err != nil {
 				return err
 			}
-			coinbase := NewCoinbaseTx("中本聪", genesisInfo)
+			coinbase := NewCoinbaseTx(address, genesisInfo)
 			txs := []*Transaction{coinbase}
 			genesisBlock := NewBlock(txs, nil)
 			bucket.Put(genesisBlock.Hash, genesisBlock.Serialize())
@@ -120,7 +121,7 @@ func (it *Iterator) Next() (block *Block) {
 }
 
 //获取指定账本的金额
-func (bc *BlockChain) FindMyUTXO(address string) []UXTOInfo {
+func (bc *BlockChain) FindMyUTXO(PubKeyHash []byte) []UXTOInfo {
 	var utxoInfos []UXTOInfo
 	//查找未花费交易的辅助集合
 	var spendUtxos = make(map[string][]int)
@@ -133,7 +134,8 @@ func (bc *BlockChain) FindMyUTXO(address string) []UXTOInfo {
 			//遍历output，判断这个output的锁定脚本是否是我们的目标地址
 		LABEL:
 			for outputIndex, output := range tx.TXOuputs {
-				if output.ScriptPubk == address {
+				if bytes.Equal(output.ScriptPubkeyHash,PubKeyHash) {
+					//fmt.Println("output.ScriptPubkeyHash",output.ScriptPubkeyHash)
 					//过滤已经花费的交易
 					currentTxId := string(tx.TXID)
 					if _, ok := spendUtxos[currentTxId]; ok {
@@ -141,7 +143,7 @@ func (bc *BlockChain) FindMyUTXO(address string) []UXTOInfo {
 						currentIds := spendUtxos[currentTxId]
 						for _, id := range currentIds {
 							if outputIndex == id {
-								break LABEL
+								continue LABEL
 							}
 						}
 					}
@@ -158,7 +160,7 @@ func (bc *BlockChain) FindMyUTXO(address string) []UXTOInfo {
 			}
 			//遍历input，添加辅助集合：
 			for _, input := range tx.TXInputs {
-				if input.ScriptSig == address {
+				if bytes.Equal(GetPubKeyHashFromPubKey(input.PubKey), PubKeyHash) {
 					spentKey := string(input.Txid)
 					spendUtxos[spentKey] = append(spendUtxos[spentKey], int(input.Index))
 
@@ -173,11 +175,12 @@ func (bc *BlockChain) FindMyUTXO(address string) []UXTOInfo {
 	return utxoInfos
 }
 
-func (bc *BlockChain) findNeedUTXO(from string, amount int) (map[string][]int64, int) {
+func (bc *BlockChain) findNeedUTXO(PubKeyHash []byte, amount int) (map[string][]int64, int) {
 	var retMap = make(map[string][]int64)
 	var retAmount int
 	//遍历账本，查找所有的UTXO
-	utxoInfos := bc.FindMyUTXO(from)
+	fmt.Println("**********pubkeyHash",PubKeyHash)
+	utxoInfos := bc.FindMyUTXO(PubKeyHash)
 	for _, utxoinfo := range utxoInfos {
 		retAmount += utxoinfo.Value
 		retMap[string(utxoinfo.Txid)] = append(retMap[string(utxoinfo.Txid)], utxoinfo.Index)
